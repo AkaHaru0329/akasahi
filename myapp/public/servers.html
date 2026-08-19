@@ -1,169 +1,151 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-<meta charset="UTF-8">
-<title>Server Dashboard α</title>
-
-<style>
-
-body{
-font-family:sans-serif;
-margin:40px;
-}
-
-table{
-border-collapse:collapse;
-width:100%;
-}
-
-td,th{
-border:1px solid #aaa;
-padding:8px;
-}
-
-button{
-cursor:pointer;
-}
-
-</style>
-
+  <meta charset="UTF-8">
+  <title>Server Dashboard</title>
 </head>
-
 <body>
 
-<h1>Server Dashboard Update</h1>
+  <h1>Server Dashboard</h1>
 
-<input id="name" placeholder="Server Name">
+  <h2>サーバー追加</h2>
 
-<select id="status">
-<option>ONLINE</option>
-<option>OFFLINE</option>
-</select>
+  <input id="name" placeholder="Server Name">
 
-<input id="cpu" type="number" placeholder="CPU">
+  <select id="status">
+    <option value="ONLINE">ONLINE</option>
+    <option value="OFFLINE">OFFLINE</option>
+  </select>
 
-<input id="memory" type="number" placeholder="Memory">
+  <input id="cpu" type="number" placeholder="CPU">
+  <input id="memory" type="number" placeholder="Memory">
 
-<button onclick="addServer()">
-追加
-</button>
+  <button onclick="addServer()">追加</button>
 
-<hr>
+  <hr>
 
-<table>
+  <h2>サーバー一覧</h2>
 
-<thead>
+  <table border="1">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Status</th>
+        <th>CPU</th>
+        <th>Memory</th>
+        <th>更新</th>
+      </tr>
+    </thead>
 
-<tr>
+    <tbody id="serverList"></tbody>
+  </table>
 
-<th>ID</th>
-<th>Name</th>
-<th>Status</th>
-<th>CPU</th>
-<th>Memory</th>
-<th></th>
+  <script>
+    async function loadServers() {
+      const response = await fetch("/api/servers");
+      const servers = await response.json();
 
-</tr>
+      const list = document.getElementById("serverList");
+      list.innerHTML = "";
 
-</thead>
+      servers.forEach((server) => {
+        const row = document.createElement("tr");
 
-<tbody id="list">
+        row.innerHTML = `
+          <td>${server.id}</td>
+          <td>${server.name}</td>
 
-</tbody>
+          <td>
+            <select id="status-${server.id}">
+              <option value="ONLINE"
+                ${server.status === "ONLINE" ? "selected" : ""}>
+                ONLINE
+              </option>
 
-</table>
+              <option value="OFFLINE"
+                ${server.status === "OFFLINE" ? "selected" : ""}>
+                OFFLINE
+              </option>
+            </select>
+          </td>
 
-<script>
+          <td>
+            <input
+              id="cpu-${server.id}"
+              type="number"
+              value="${server.cpu_usage}"
+            >
+          </td>
 
-async function loadServers(){
+          <td>
+            <input
+              id="memory-${server.id}"
+              type="number"
+              value="${server.memory_usage}"
+            >
+          </td>
 
-const res=await fetch("api/servers");
+          <td>
+            <button onclick="updateServer(${server.id})">
+              更新
+            </button>
+          </td>
+        `;
 
-const servers=await res.json();
+        list.appendChild(row);
+      });
+    }
 
-const tbody=document.getElementById("list");
+    async function addServer() {
+      const name = document.getElementById("name").value;
+      const status = document.getElementById("status").value;
+      const cpu = Number(document.getElementById("cpu").value);
+      const memory = Number(document.getElementById("memory").value);
 
-tbody.innerHTML="";
+      await fetch("/api/servers", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          name: name,
+          status: status,
+          cpu_usage: cpu,
+          memory_usage: memory
+        })
+      });
 
-servers.forEach(server=>{
+      loadServers();
+    }
 
-tbody.innerHTML+=`
+    async function updateServer(id) {
+      const status =
+        document.getElementById(`status-${id}`).value;
 
-<tr>
+      const cpu =
+        Number(document.getElementById(`cpu-${id}`).value);
 
-<td>${server.id}</td>
+      const memory =
+        Number(document.getElementById(`memory-${id}`).value);
 
-<td>${server.name}</td>
+      await fetch(`/api/servers/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          status: status,
+          cpu_usage: cpu,
+          memory_usage: memory
+        })
+      });
 
-<td>${server.status}</td>
+      loadServers();
+    }
 
-<td>${server.cpu_usage}%</td>
-
-<td>${server.memory_usage}%</td>
-
-<td>
-
-<button onclick="deleteServer(${server.id})">
-
-削除
-
-</button>
-
-</td>
-
-</tr>
-
-`;
-
-});
-
-}
-
-async function addServer(){
-
-await fetch("api/servers",{
-
-method:"POST",
-
-headers:{
-"Content-Type":"application/json"
-},
-
-body:JSON.stringify({
-
-name:document.getElementById("name").value,
-
-status:document.getElementById("status").value,
-
-cpu_usage:Number(document.getElementById("cpu").value),
-
-memory_usage:Number(document.getElementById("memory").value)
-
-})
-
-});
-
-loadServers();
-
-}
-
-async function deleteServer(id){
-
-await fetch("api/servers/"+id,{
-
-method:"DELETE"
-
-});
-
-loadServers();
-
-}
-
-loadServers();
-
-</script>
+    loadServers();
+  </script>
 
 </body>
-
 </html>
